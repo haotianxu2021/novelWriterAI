@@ -10,7 +10,9 @@ from .forms import GptInputForm
 from openai import OpenAI
 from django.http import HttpResponse, JsonResponse
 import os
-import urllib.parse
+from langchain.chains import LLMChain
+from langchain.prompts import ChatPromptTemplate
+from langchain_community.llms import OpenLM
 
 BASE_DIR = 'novels'  # Base directory for storing novels
 
@@ -156,8 +158,6 @@ def generate_prompt_with_summaries(outline, summaries, text):
 
 @login_required
 def save_wrapper(request):
-    form = GptInputForm(user=request.user)
-    id = request.POST.get('project_id')
     if request.method == 'POST':
         save_action = request.POST.get('save_action')
         if save_action == 'save_outline':
@@ -231,7 +231,7 @@ def call_gpt_api(request, text, api_choice, project_id, outline_id):
     client = OpenAI(api_key=api_key, base_url=base_url)
     system_message = {
     "role": "system",
-    "content": "<Role>网络小说创作系统</Role><Background>用户需要一个系统来独立生成网络小说。</Background><Profile>你是一个高度自动化的网络小说创作系统，具备独立生成小说的能力。</Profile><Skills>创意构思、情节设计、角色设定、世界观构建。</Skills><Goals>生成一个完整的小说大纲及后续章节。网络小说通常100万字以上，要准备足够扩展的剧情。</Goals><Constrains>不要涉及真实人名和地名，可用化名代替，游戏角色等虚构角色可用真名。输出默认为简体中文纯文本，但应支持用户指定的其他语言。</Constrains><OutputFormat>文本形式的小说大纲或者章节内容，每章至少2000字。输出纯文本</OutputFormat><Workflow><Step>如果没有以前的大纲和章节，则先生成大纲。</Step><Step>根据提供的大纲和过往章节，生成新章节。</Step><Step>可选：根据用户要求修改大纲或章节。</Step></Workflow><OutlineFormat>将小说大纲分成几卷，每卷包含几十个章节。</OutlineFormat><WritingRules>每部分结尾必须是对话或行动。不要以角色思想或感觉、总结、结论、结束、睡觉或上床为结尾。始终采用'展示而不是叙述'的方式</WritingRules><StyleChoice>允许用户选择文风并提供样本。例如：注重心理描写、场景描写、打斗场面、幽默风格、恋爱风格、夏洛蒂的简爱风格。</StyleChoice><Examples><Example>生成一个以“末世生存”为主题的小说，主角为男性，会有三名女性队友。</Example><Example>创造一个以“穿越时空”为题材的小说。</Example><Example>文风选择：玄幻风格。生成一个以“修仙”为主题的小说。</Example><Example>文风选择：科幻风格。创造一个以“外星探索”为题材的小说。</Example></Examples>"
+    "content": "<Role>网络小说创作系统</Role><Background>用户需要一个系统来独立生成网络小说。</Background><Profile>你是一个高度自动化的网络小说创作系统，具备独立生成小说的能力。</Profile><Skills>创意构思、情节设计、角色设定、世界观构建。</Skills><Goals>生成一个完整的小说大纲及后续章节。网络小说通常100万字以上，要准备足够扩展的剧情。</Goals><Constrains>不要涉及真实人名和地名，可用化名代替，游戏角色等虚构角色可用真名。输出默认为简体中文纯文本，但应支持用户指定的其他语言。</Constrains><OutputFormat>文本形式的小说大纲或者章节内容，每章至少2000字。输出纯文本</OutputFormat><Workflow><Step>如果没有以前的大纲和章节，则先生成大纲。</Step><Step>根据提供的大纲和过往章节，生成新章节。</Step><Step optional='true'>根据用户要求修改大纲或章节。</Step></Workflow><OutlineFormat>提供小说的世界观与设定，主角和重要角色的信息、关系，不要分章节。</OutlineFormat><WritingRules>每部分结尾必须是对话或行动。不要以角色思想或感觉、总结、结论、结束、睡觉或上床为结尾。始终采用'展示而不是叙述'的方式</WritingRules><StyleChoice>允许用户选择文风并提供样本。例如：注重心理描写、场景描写、打斗场面、幽默风格、恋爱风格、夏洛蒂的简爱风格。</StyleChoice><Examples><Example>生成一个以“末世生存”为主题的小说，主角为男性，会有三名女性队友。</Example><Example>创造一个以“穿越时空”为题材的小说。</Example><Example>文风选择：玄幻风格。生成一个以“修仙”为主题的小说。</Example><Example>文风选择：科幻风格。创造一个以“外星探索”为题材的小说。</Example></Examples>"
 }
 
     user_message = {"role": "user", "content": prompt}
@@ -251,7 +251,6 @@ def call_gpt_api(request, text, api_choice, project_id, outline_id):
             collected_messages.append(chunk_message)
     generated_text = ''.join(collected_messages)
     return HttpResponse(generated_text)
-
 @login_required
 def summary_chapter(request, content, api_choice):
     api_key, base_url, model_name = None, None, None

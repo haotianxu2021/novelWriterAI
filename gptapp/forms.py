@@ -15,7 +15,6 @@ class GptInputForm(forms.Form):
         if user:
             self.fields['novel_project'].choices = [('', 'Select a project')] + [(project.id, project.title) for project in NovelProject.objects.filter(user=user)]
 
-
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = User
