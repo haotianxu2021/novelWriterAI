@@ -4,7 +4,7 @@ You need to install Python before installing this application.
 
 Open your terminal or cmd, open a location where you want to install this application, then type the following command:
 
-''' bash
+
 git clone https://github.com/haotianxu2021/novelWriterAI.git
 
 cd novelWriterAI
@@ -14,7 +14,7 @@ pip install -r requirements.txt
 python manage.py migrate
 
 python manage.py runserver
-'''
+
 
 ## Usage
 
