@@ -16,15 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from gptapp.views import SignUpView, CustomLoginView, BaseView, api_keys_list, add_api_key, remove_api_key, generate_text, save_wrapper
+from gptapp.views import SignUpView, CustomLoginView, BaseView, api_keys_list, add_api_key, remove_api_key, generate_text, save_wrapper, redirect_to_login
 from django.contrib.auth.views import LogoutView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', redirect_to_login, name='home'),
     path('signup/', SignUpView.as_view(), name='signup'),
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
-    path('home/', BaseView.as_view(), name='home'),
     path('api-key/', api_keys_list, name='api_key'),
     path('api-key/add/', add_api_key, name='add_api_key'),
     path('api-key/remove/<int:api_key_id>/', remove_api_key, name='remove_api_key'),

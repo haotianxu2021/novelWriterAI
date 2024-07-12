@@ -10,11 +10,12 @@ from .forms import GptInputForm
 from openai import OpenAI
 from django.http import HttpResponse, JsonResponse
 import os
-from langchain.chains import LLMChain
-from langchain.prompts import ChatPromptTemplate
-from langchain_community.llms import OpenLM
+
 
 BASE_DIR = 'novels'  # Base directory for storing novels
+
+def redirect_to_login(request):
+    return redirect('login')
 
 def get_user_dir(user):
     user_dir = os.path.join(BASE_DIR, str(user.id))
