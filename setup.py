@@ -1,11 +1,11 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='Naive Novel Writer',
+    name='Novel Writer',
     version='0.1.0',
     packages=find_packages(),
+    include_package_data=True,
     install_requires=[
-        # 依赖项
         'django>=3.2',
         'gunicorn',
     ],

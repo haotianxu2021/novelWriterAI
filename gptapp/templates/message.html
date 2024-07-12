@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+
+{% block title %}Message{% endblock %}
+
+{% block content %}
+    <p>{{ message }}</p>
+    <button class="btn btn-secondary "><a class="nav-link" href="{% url 'generate_text' %}">Return</a></button>
+{% endblock %}
