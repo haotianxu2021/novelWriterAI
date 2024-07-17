@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Api Key{% endblock %}
+
+{% block content %}
+<form method="post">
+    {% csrf_token %}
+    <label for="id_key">API Key:</label>
+    <input type="text" name="key" required>
+    <label for="id_usage">Usage:</label>
+    <select name="usage" required>
+        <option value="chatgpt">ChatGPT 4</option>
+        <option value="kimi">Kimi</option>
+    </select>
+    <button type="submit">Add API Key</button>
+</form>
+{% endblock %}

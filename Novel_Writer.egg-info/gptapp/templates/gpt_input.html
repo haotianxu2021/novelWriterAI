@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+{% if not user.is_authenticated %}
+<h2>Please Login In First</h2>
+{% endif %}
+{% if user.is_authenticated %}
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Generate Text</button>
+</form>
+<h2>Response</h2>
+<form action="{% url 'save_outline' %}" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="project_id" value={{ project_id|safe }}>
+    
+    <textarea class="col-12" rows="10" name="response">{{ response }}</textarea>
+    {% if project_id != -1 %}
+    Summary option:
+    <select name="api_choice">
+        <option value="kimi">Kimi</option>
+        <option value="chatgpt">
+            ChatGPT
+        </option>
+    </select>
+    <button type="submit" class="btn btn-primary" name="save_action" value="save_outline">Save outline</button>
+    <button type="submit" class="btn btn-primary" name="save_action" value="save_chapter">Save chapter</button>
+    {% endif %}
+</form>
+{% endif %}
+{% endblock %}

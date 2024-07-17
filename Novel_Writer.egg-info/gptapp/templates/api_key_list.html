@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Api Key List{% endblock %}
+
+{% block content %}
+    <h2>API Keys</h2>
+    <button class="btn btn-primary"><a class="nav-link" href="{% url 'add_api_key' %}">Add API Key</a></button>
+    <hr>
+    {% for api_key in api_keys %}
+    <p>
+        <span>{{ api_key.key|truncatechars:10 }} - {{ api_key.usage }}</span>
+        <!-- 使用表单来发送POST请求 -->
+        <form action="{% url 'remove_api_key' api_key.id %}" method="post" style="margin-left: 10px;">
+            {% csrf_token %}
+            <button class="btn btn-danger" type="submit">Remove</button>
+        </form>
+        <hr>
+    </p>
+    {% endfor %}
+{% endblock %}
