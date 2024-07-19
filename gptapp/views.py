@@ -10,6 +10,7 @@ from .forms import GptInputForm
 from openai import OpenAI
 from django.http import HttpResponse, JsonResponse
 import os
+import anthropic
 
 
 BASE_DIR = 'novels'  # Base directory for storing novels
@@ -229,6 +230,8 @@ def call_gpt_api(request, text, api_choice, project_id, outline_id):
         usage_filter, model_name, base_url = 'chatgpt', "gpt-4o", "https://api.openai.com/v1"
     elif api_choice == 'kimi':
         usage_filter, model_name, base_url = 'kimi', "moonshot-v1-32k", "https://api.moonshot.cn/v1"
+    elif api_choice == 'claude':
+        usage_filter, model_name, base_url = 'claude', 'claude-3-5-sonnet-20240620', "https://api.anthropic.com/v1"
 
     # Retrieve API key
     api_keys = ApiKey.objects.filter(user=request.user, usage=usage_filter)
@@ -253,7 +256,12 @@ def call_gpt_api(request, text, api_choice, project_id, outline_id):
     if not ok:
         return HttpResponse('No System Prompt file found.', status=400)
     # Call GPT API
-    client = OpenAI(api_key=api_key, base_url=base_url)
+    if api_choice == 'claude':
+        client = anthropic.Anthropic(
+            api_key=api_key,
+        )
+    else:
+        client = OpenAI(api_key=api_key, base_url=base_url)
     system_message = {
     "role": "system",
     "content": system_prompt
@@ -261,20 +269,30 @@ def call_gpt_api(request, text, api_choice, project_id, outline_id):
 
     user_message = {"role": "user", "content": prompt}
     messages = [system_message, user_message]
-
-    response = client.chat.completions.create(
-        model=model_name,
-        messages=messages,
-        stream=True,
-    )
+    messages_claude = [{"role": "user", "content": [{"type":"text","text":system_prompt}]}, {"role": "assistant", "content": [{"type":"text","text":"Got it!"}]},{"role": "user", "content": [{"type":"text","text":prompt}]}]
+    if api_choice == 'claude':
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20240620",
+            max_tokens=1024,
+            messages=messages_claude
+        )
+    else:
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            stream=True
+        )
     
     # Collect and save generated text
-    collected_messages = []
-    for chunk in response:
-        chunk_message = chunk.choices[0].delta.content
-        if chunk_message:
-            collected_messages.append(chunk_message)
-    generated_text = ''.join(collected_messages)
+    if api_choice == 'claude':
+        generated_text = str(response.content)
+    else:
+        collected_messages = []
+        for chunk in response:
+            chunk_message = chunk.choices[0].delta.content
+            if chunk_message:
+                collected_messages.append(chunk_message)
+        generated_text = ''.join(collected_messages)
     return HttpResponse(generated_text)
 
 @login_required
@@ -284,27 +302,46 @@ def summary_chapter(request, content, api_choice):
         usage_filter, model_name, base_url = 'chatgpt', "gpt-4o", "https://api.openai.com/v1"
     elif api_choice == 'kimi':
         usage_filter, model_name, base_url = 'kimi', "moonshot-v1-32k", "https://api.moonshot.cn/v1"
+    elif api_choice == 'claude':
+        usage_filter, model_name, base_url = 'claude', 'claude-3-5-sonnet-20240620', "https://api.anthropic.com/v1"
     
     api_keys = ApiKey.objects.filter(user=request.user, usage=usage_filter)
     if api_keys.exists():
         api_key = api_keys.first().key
     else:
         return HttpResponse(f"No API key found for {api_choice}.", status=400)
-    client = OpenAI(api_key=api_key, base_url=base_url)
+    if api_choice == 'claude':
+        client = anthropic.Anthropic(
+            api_key=api_key,
+        )
+    else:
+        client = OpenAI(api_key=api_key, base_url=base_url)
     system_message = {"role": "system", "content": "生成对应小说章节的概要，不多于200字"}
     user_message = {"role": "user", "content": content}
     messages = [system_message, user_message]
-    response = client.chat.completions.create(
-        model=model_name,
-        messages=messages,
-        stream=True,
-    )
+    messages_claude = [{"role": "user", "content": [{"type":"text","text":"生成对应小说章节的概要，不多于200字"}]}, {"role": "assistant", "content": [{"type":"text","text":"Got it!"}]},{"role": "user", "content": [{"type":"text","text":content}]}]
+    if api_choice == 'claude':
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20240620",
+            max_tokens=1024,
+            messages=messages_claude
+        )
+    else:
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            stream=True
+        )
     collected_messages = []
-    for chunk in response:
-        chunk_message = chunk.choices[0].delta.content
-        if chunk_message:
-            collected_messages.append(chunk_message)
-    generated_text = ''.join(collected_messages)
+    if api_choice == 'claude':
+        generated_text = str(response.content)
+    else:
+        collected_messages = []
+        for chunk in response:
+            chunk_message = chunk.choices[0].delta.content
+            if chunk_message:
+                collected_messages.append(chunk_message)
+        generated_text = ''.join(collected_messages)
     return HttpResponse(generated_text)
 
 def get_system_prompt(user):

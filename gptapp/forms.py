@@ -5,7 +5,7 @@ from django import forms
 
 class GptInputForm(forms.Form):
     text = forms.CharField(widget=forms.Textarea, label='Text to Generate')
-    api_choice = forms.ChoiceField(choices=[('chatgpt', 'ChatGPT'), ('kimi', 'Kimi')], label='API Choice')
+    api_choice = forms.ChoiceField(choices=[('chatgpt', 'ChatGPT'), ('kimi', 'Kimi'), ('claude', 'Claude')], label='API Choice')
     novel_project = forms.ChoiceField(choices=[], required=False, label='Choose an existing project')
     new_project_title = forms.CharField(max_length=200, required=False, label='Or create a new project title')
 
