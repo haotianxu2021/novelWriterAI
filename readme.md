@@ -30,4 +30,5 @@ python manage.py runserver
 
 ## Update
 0.1.1: Allow revising the system prompt in the "Update System Prompt".
+
 0.1.2: Now support Claude.
