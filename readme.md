@@ -38,5 +38,3 @@ python manage.py runserver
 
 0.1.3: Fix a bug that you cannot save outline/chapter without generating text first. Now the input prompt will automatically input your last chapter fully (along with the last 5 chapter summaries). 修复了一个无法在未生成文本前保存大纲/章节的错误。现在输入提示将自动完整输入你的最后一章（以及最后五章的摘要）。
 
-## Other Notes 其他说明
-Some use suggestions: To make your characters not act as idiots, I suggest you using these Chinese prompts "文风要有逼格，有文学性，有深度". However, it may change your characters to act as idiots in another way. 一些使用建议：为了使你的角色不表现得像白痴，我建议你使用这些中文提示“文风要有逼格，有文学性，有深度”。然而，这可能会让你的角色以另一种方式表现得像白痴。
