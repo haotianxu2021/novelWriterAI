@@ -34,7 +34,7 @@ python manage.py runserver
 ## Update 更新日志
 0.1.1: Allow revising the system prompt in the "Update System Prompt". 允许在“更新系统提示”中修改系统提示。
 
-0.1.2: Now support Claude. (The max generation length of Claude Sonnet 3.5 is 1024, so you decide whether to use it.) 现在支持Claude。（Claude Sonnet 3.5的最大生成长度是1024，所以你决定是否使用它。）
+0.1.2: Now support Claude. (The max generation length of Claude Sonnet 3.5 is 1024 by API calls, so you decide whether to use it.) 现在支持Claude。（Claude Sonnet 3.5的API最大生成长度是1024，所以你决定是否使用它。）
 
 0.1.3: Fix a bug that you cannot save outline/chapter without generating text first. Now the input prompt will automatically input your last chapter fully (along with the last 5 chapter summaries). 修复了一个无法在未生成文本前保存大纲/章节的错误。现在输入提示将自动完整输入你的最后一章（以及最后五章的摘要）。
 
