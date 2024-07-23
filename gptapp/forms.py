@@ -22,3 +22,15 @@ class CustomUserCreationForm(UserCreationForm):
 
 class TextGenerationForm(forms.Form):
     text = forms.CharField(widget=forms.Textarea)
+
+class SummaryForm(forms.Form):
+    response = forms.CharField(widget=forms.Textarea, label='Text to Save')
+    api_choice = forms.ChoiceField(choices=[('chatgpt', 'ChatGPT'), ('kimi', 'Kimi'), ('claude', 'Claude')], label='API Choice')
+    project_id = forms.ChoiceField(choices=[], required=False, label='Choose an existing project')
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        initial = kwargs.pop('initial', {})
+        super(SummaryForm, self).__init__(*args, **kwargs)
+        if user:
+            self.fields['project_id'].choices = [('', 'Select a project')] + [(project.id, project.title) for project in NovelProject.objects.filter(user=user)]
+        self.data = initial

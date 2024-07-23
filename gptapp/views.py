@@ -6,7 +6,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import CreateView, View
 from django.urls import reverse_lazy
 from .forms import CustomUserCreationForm
-from .forms import GptInputForm
+from .forms import GptInputForm, SummaryForm
 from openai import OpenAI
 from django.http import HttpResponse, JsonResponse
 import os
@@ -103,6 +103,7 @@ def save_initial_system_prompt(request):
 def generate_text(request):
     if request.method == 'POST':
         form = GptInputForm(request.POST, user=request.user)
+        
         if form.is_valid():
             text = form.cleaned_data['text']
             api_choice = form.cleaned_data['api_choice']
@@ -114,21 +115,41 @@ def generate_text(request):
             if novel_project_id:
                 novel_project = NovelProject.objects.get(id=novel_project_id, user=request.user)
                 outline_id = novel_project.outline
+                chapter_id = novel_project.chapter
             elif new_project_title:
                 if NovelProject.objects.filter(user=request.user, title=new_project_title).exists(): 
-                    return render(request, 'gpt_input.html', {'form': form, 'response': 'Project already exists', 'project_id': novel_project_id})
+                    initial_data = {
+                        'response': 'Project already exists',
+                        'api_choice': 'kimi',
+                        'project_id': ''
+                    }
+                    form2 = SummaryForm(request.POST, user=request.user, initial=initial_data)
+                    return render(request, 'gpt_input.html', {'form': form, 'form2': form2, 'project_id': novel_project_id})
                 novel_project = NovelProject.objects.create(user=request.user, title=new_project_title, outline=0)
                 novel_project_id = novel_project.id
                 outline_id = novel_project.outline
+                chapter_id = novel_project.chapter
             else:
-                return render(request, 'gpt_input.html', {'form': form, 'response': 'Please select or create a project.', 'project_id': novel_project_id})
-
+                initial_data = {
+                    'response': 'Please select or create a project.',
+                    'api_choice': 'kimi',
+                    'project_id': ''
+                }
+                form2 = SummaryForm(request.POST, user=request.user, initial=initial_data)
+                return render(request, 'gpt_input.html', {'form': form, 'form2': form2, 'project_id': novel_project_id})
 
             # Call GPT API with the provided outline_id
-            response_data = call_gpt_api(request, text, api_choice, novel_project_id,outline_id)
-            return render(request, 'gpt_input.html', {'form': form, 'response': response_data.content.decode('utf-8'),'project_id': novel_project_id})
+            response_data = call_gpt_api(request, text, api_choice, novel_project_id,outline_id, chapter_id)
+            initial_data = {
+                'response': response_data.content.decode('utf-8'),
+                'api_choice': 'kimi',
+                'project_id': novel_project_id
+            }
+            form2 = SummaryForm(request.POST, user=request.user, initial=initial_data)
+            return render(request, 'gpt_input.html', {'form': form, 'form2': form2, 'response': response_data.content.decode('utf-8'),'project_id': novel_project_id})
     else:
         form = GptInputForm(user=request.user)
+        # form2 = SummaryForm(request.POST, user=request.user)
         # Check if there are existing novel projects for the user
         existing_projects = NovelProject.objects.filter(user=request.user)
         if existing_projects.exists():
@@ -139,7 +160,13 @@ def generate_text(request):
             novel_project_id = first_project.id
         else: 
             novel_project_id = -1
-    return render(request, 'gpt_input.html', {'form': form, 'response': '','project_id': novel_project_id})
+        initial_data = {
+            'response': '',
+            'api_choice': 'kimi',
+            'project_id': ''
+        }
+        form2 = SummaryForm(request.POST, user=request.user, initial=initial_data)
+    return render(request, 'gpt_input.html', {'form': form, 'form2': form2, 'response': '','project_id': novel_project_id})
 
 
 def get_chapter_summary_file(user, project_id, outline_id, chapter_id):
@@ -163,10 +190,10 @@ def save_chapter(request):
     project.save()
     return True
 
-def get_last_chapter_summaries(user, outline_id, num_chapters=5):
+def get_last_chapter_summaries(user, project_id, outline_id, num_chapters=5):
     summaries = []
     summary_files = sorted(
-        [f for f in os.listdir(get_user_dir(user)) if f.endswith('_summary.txt')],
+        [f for f in os.listdir(get_user_dir(user)) if f.startswith(get_chapter_summary_file(user, project_id, outline_id,0)[0:-16])],
         reverse=True
     )[:num_chapters]
     
@@ -176,8 +203,26 @@ def get_last_chapter_summaries(user, outline_id, num_chapters=5):
     
     return '\n'.join(reversed(summaries))
 
-def generate_prompt_with_summaries(outline, summaries, text):
-    prompt = f"Outline: {outline}\n\nPrevious Chapter Summaries: {summaries}\n\nNew Text: {text}"
+def get_writing_sample(user):
+    filepath = os.path.join(get_user_dir(user), 'writing_sample.txt')
+    try:
+        with open(filepath, 'r') as f:
+            content = f.read()
+        return content, True
+    except OSError:
+        return 'Display warning: Unable to find the writing sample.', False
+
+def get_last_chapter(user, project_id, outline_id, chapter_id):
+    filepath = get_chapter_file(user, project_id, outline_id, chapter_id)
+    try:
+        with open(filepath, 'r') as f:
+            content = f.read()
+        return content, True
+    except OSError:
+        return 'Display warning: Unable to find the last chapter.', False
+
+def generate_prompt_with_summaries(outline, summaries, text, last_chapter):
+    prompt = f"<previous_outline>\n\n{outline}\n\n</previous_outline>\n\n<previous_chapter_summaries>\n\n{summaries}\n\n</<previous_chapter_summaries>\n\n<novel_prompt>\n\n{text}\n\n</novel_prompt>\n\n<writing_styles>\n\n{last_chapter}\n\n<writing_styles>"
     return prompt
 
 @login_required
@@ -223,7 +268,7 @@ def get_outline(request, outline_id):
     return JsonResponse({'content': content, 'chapters': chapters})
 
 @login_required
-def call_gpt_api(request, text, api_choice, project_id, outline_id):
+def call_gpt_api(request, text, api_choice, project_id, outline_id, chapter_id):
     # Determine API key and base URL
     api_key, base_url, model_name = None, None, None
     if api_choice == 'chatgpt':
@@ -243,15 +288,18 @@ def call_gpt_api(request, text, api_choice, project_id, outline_id):
     if outline_id == 0:
         outline_content = ""
         last_chapters = ""
+        last_chap = ""
     else:
         outline_file = get_outline_file(request.user, project_id, outline_id)
         with open(outline_file, 'r') as f:
             outline_content = f.read()
-
-        last_chapters = get_last_chapter_summaries(request.user, outline_id, num_chapters=5)
+        last_chap, ok = get_last_chapter(request.user, project_id, outline_id, chapter_id)
+        if not ok:
+            last_chap = ""
+        last_chapters = get_last_chapter_summaries(request.user, project_id, outline_id, num_chapters=5)
     
     # Generate prompt
-    prompt = generate_prompt_with_summaries(outline_content, last_chapters, text)
+    prompt = generate_prompt_with_summaries(outline_content, last_chapters, text, last_chap)
     system_prompt, ok = get_system_prompt(user=request.user)
     if not ok:
         return HttpResponse('No System Prompt file found.', status=400)
@@ -323,7 +371,7 @@ def summary_chapter(request, content, api_choice):
     if api_choice == 'claude':
         response = client.messages.create(
             model="claude-3-5-sonnet-20240620",
-            max_tokens=1024,
+            max_tokens=4096,
             messages=messages_claude
         )
     else:
